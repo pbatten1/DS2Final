@@ -4,3 +4,6 @@ dplyr
 GGally
 bindrcpp
 psych
+lattice
+ggplot2
+caret

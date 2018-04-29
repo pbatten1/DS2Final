@@ -9,11 +9,12 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
 ```
 
-```{r}
+```{r, summary_all}
 ### Summary stuff for DS2 final project
 
 library(mlbench)
 data(BreastCancer)
+attach(BreastCancer)
 library(dplyr)
 BreastCancer <- BreastCancer[,-1] # remove ID column
 summary(BreastCancer) # note that everything is factor
@@ -21,12 +22,12 @@ summary(BreastCancer) # note that everything is factor
 plot(BreastCancer)
 ```
 
-```{r}
+```{r, ggpairs_factor_plot}
 library(GGally)
 ggpairs(BreastCancer) # note all are factors
 ```
 
-```{r}
+```{r, ggpairs_num_plot}
 BreastCancer = BreastCancer %>% 
   mutate(Cl.thickness=as.numeric(Cl.thickness)) %>% 
   mutate(Cell.size=as.numeric(Cell.size)) %>%  
@@ -41,17 +42,72 @@ BreastCancer = BreastCancer %>%
 ggpairs(BreastCancer) # all but response are numeric
 ```
 
-```{r}
+```{r, cor_plot_noresp}
 library(psych)
 cor.plot(BreastCancer[,-10]) # correlation not including response
 ```
 
-```{r}
-BreastCancer <- BreastCancer %>% mutate(Class = as.numeric(Class)) # numeric response
-cor.plot(BreastCancer[,])
+```{r, cor_plot_wresp}
+BreastCancer_num <- BreastCancer %>% 
+  mutate(Class = as.numeric(Class)-1) # numeric response
+cor.plot(BreastCancer_num[,])
+```
+
+```{r, try_feature_plots}
+featurePlot(x=BreastCancer[,-10], y=BreastCancer[,10], 
+            plot="pairs", 
+            auto.key=list(columns=3))
+
+featurePlot(x=BreastCancer[,-10], y=BreastCancer[,10], 
+            plot="density", 
+            scales=list(x=list(relation="free"), 
+                        y=list(relation="free")), 
+            auto.key=list(columns=3),
+            layout=c(3,3))
+
+featurePlot(x=BreastCancer[,-10], y=BreastCancer[,10], 
+            plot="box", 
+            scales=list(x=list(relation="free"), 
+                        y=list(relation="free")), 
+            auto.key=list(columns=3),
+            layout=c(3,3))
+```
+
+
+```{r, glm_all}
+glm1 = glm(Class ~., data=BreastCancer_num,family=binomial)
+
+summary(glm1)
+```
+
+At $\alpha$ = 0.05 the following appear significant :
+
+> Cl.thickness
+> Marg.adhesion
+> Bare.nuclei
+> Bl.cromatin
+
+```{r, glm_sig}
+glm2 = glm(Class ~ Cl.thickness + Marg.adhesion + 
+             Bare.nuclei + Bl.cromatin, 
+           data=BreastCancer_num,family=binomial)
+
+summary(glm2)
 ```
 
 ```{r}
+library(caret)
 
+featurePlot(x=BreastCancer[,c(1,4,6,7)], y=BreastCancer[,10], 
+            plot="density", 
+            scales=list(x=list(relation="free"), 
+                        y=list(relation="free")), 
+            auto.key=list(columns=3))
+
+featurePlot(x=BreastCancer[,c(1,4,6,7)], y=BreastCancer[,10], 
+            plot="box", 
+            scales=list(x=list(relation="free"), 
+                        y=list(relation="free")), 
+            auto.key=list(columns=3))
 ```
 
