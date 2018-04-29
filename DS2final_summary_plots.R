@@ -1,17 +1,17 @@
 ### Summary stuff for DS2 final project
 
-> library(mlbench)
-> data(BreastCancer)
-> library(dplyr)
-> BreastCancer <- BreastCancer[,-1] # remove ID column
-> summary(BreastCancer) # note that everything is factor
+library(mlbench)
+data(BreastCancer)
+library(dplyr)
+BreastCancer <- BreastCancer[,-1] # remove ID column
+summary(BreastCancer) # note that everything is factor
 
-> plot(BreastCancer)
+plot(BreastCancer)
 
-> library(GGally)
-> ggpairs(BreastCancer) # note all are factors
+library(GGally)
+ggpairs(BreastCancer) # note all are factors
 
-> BreastCancer = BreastCancer %>% 
+BreastCancer = BreastCancer %>% 
   mutate(Cl.thickness=as.numeric(Cl.thickness)) %>% 
   mutate(Cell.size=as.numeric(Cell.size)) %>%  
   mutate(Cell.shape=as.numeric(Cell.shape)) %>%  
@@ -22,12 +22,12 @@
   mutate(Normal.nucleoli=as.numeric(Normal.nucleoli)) %>%  
   mutate(Mitoses=as.numeric(Mitoses))
 
-> ggpairs(BreastCancer) # all but response are numeric
+ggpairs(BreastCancer) # all but response are numeric
 
-> library(psych)
-> dev.off()
-> cor.plot(BreastCancer[,-10]) # correlation not including response
+library(psych)
+dev.off()
+cor.plot(BreastCancer[,-10]) # correlation not including response
 
-> BreastCancer <- BreastCancer %>% mutate(Class = as.numeric(Class)) # numeric response
-> dev.off()
-> cor.plot(BreastCancer[,])
+BreastCancer <- BreastCancer %>% mutate(Class = as.numeric(Class)) # numeric response
+dev.off()
+cor.plot(BreastCancer[,])
