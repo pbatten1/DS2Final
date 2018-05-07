@@ -37,7 +37,7 @@ BreastCancer = BreastCancer %>%
   mutate(Bare.nuclei=as.numeric(Bare.nuclei)) %>%  
   mutate(Bl.cromatin=as.numeric(Bl.cromatin)) %>%  
   mutate(Normal.nucleoli=as.numeric(Normal.nucleoli)) %>%  
-  mutate(Mitoses=as.numeric(Mitoses))
+  mutate(Mitoses=as.numeric(Mitoses)) %>% na.omit()
 
 ggpairs(BreastCancer) # all but response are numeric
 ```
@@ -75,7 +75,7 @@ featurePlot(x=BreastCancer[,-10], y=BreastCancer[,10],
 
 
 ```{r, glm_all}
-glm1 = glm(Class ~., data=BreastCancer_num,family=binomial)
+glm1 = glm(Class ~., data=BreastCancer,family=binomial)
 
 summary(glm1)
 ```
@@ -90,7 +90,7 @@ At $\alpha$ = 0.05 the following appear significant :
 ```{r, glm_sig}
 glm2 = glm(Class ~ Cl.thickness + Marg.adhesion + 
              Bare.nuclei + Bl.cromatin, 
-           data=BreastCancer_num,family=binomial)
+           data=BreastCancer,family=binomial)
 
 summary(glm2)
 ```
@@ -111,3 +111,36 @@ featurePlot(x=BreastCancer[,c(1,4,6,7)], y=BreastCancer[,10],
             auto.key=list(columns=3))
 ```
 
+
+
+```{r}
+set.seed(1)
+BreastCancer.train <- sample(1:nrow(BreastCancer), 410) 
+
+BreastCancer.test=BreastCancer[-BreastCancer.train,] # test
+dim(BreastCancer.test)
+Class.test=BreastCancer$Class[-BreastCancer.train]
+
+glm.fits=glm(Class ~ Cl.thickness + Marg.adhesion + 
+             Bare.nuclei + Bl.cromatin, 
+           data=BreastCancer,family=binomial, subset=BreastCancer.train)
+
+glm.probs = predict(glm.fits, BreastCancer.test, type = "response")
+glm.pred=rep("benign",273)
+glm.pred[glm.probs >.5]="malignant"
+table(glm.pred, Class.test)
+
+
+mean(glm.pred == Class.test)
+mean(glm.pred != Class.test)
+
+library(pROC)
+
+roc.glm.train <- roc(BreastCancer.test$Class, glm.probs,
+               levels = c("benign", "malignant"))
+plot(roc.glm.train, legacy.axes = TRUE)
+
+auc(roc.glm.train)
+```
+
+Logistic has 95% correct response for test
