@@ -5,26 +5,241 @@ date: "April 26, 2018"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+Since our research area is highly regulated and in the clinical setting, we chose to use an untouched testing set to evaluate the performance of our methods.
+
+
+```{r}
+library(mlbench)
+data(BreastCancer)
+attach(BreastCancer)
+library(dplyr)
+BreastCancer <- BreastCancer[,-1] # remove ID column
+summary(BreastCancer) # note that everything is factor
+
+
+library(reshape2)
+library(ggplot2)
+independent_vars <- melt(BreastCancer[,-10])
+ggplot(independent_vars,aes(x = value)) + 
+    facet_wrap(~variable,scales = "free_x") + 
+    geom_histogram()
+
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+```{r}
+BreastCancer = BreastCancer %>% 
+  mutate(Cl.thickness=as.numeric(Cl.thickness)) %>% 
+  mutate(Cell.size=as.numeric(Cell.size)) %>%  
+  mutate(Cell.shape=as.numeric(Cell.shape)) %>%  
+  mutate(Marg.adhesion=as.numeric(Marg.adhesion)) %>%  
+  mutate(Epith.c.size=as.numeric(Epith.c.size)) %>%  
+  mutate(Bare.nuclei=as.numeric(Bare.nuclei)) %>%  
+  mutate(Bl.cromatin=as.numeric(Bl.cromatin)) %>%  
+  mutate(Normal.nucleoli=as.numeric(Normal.nucleoli)) %>%  
+  mutate(Mitoses=as.numeric(Mitoses))
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
+```{r}
+# K-Means Clustering
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+BreastCancer <- na.omit(BreastCancer)
+
+set.seed(2)
+
+predictors <- BreastCancer[,1:9]
+
+km.out <- kmeans(predictors, 2, nstart = 20)
+
+km.out$cluster
+plot(predictors, col=(km.out$cluster+1), 
+     main="K-Means Clustering Results with K=2", 
+     xlab="", ylab="", pch=20, cex=2)
+
+sum_squares <- rep(0, 8)
+for(i in 1:8){
+  km.out <- kmeans(predictors, i, nstart = 20)
+  sum_squares[i] <- km.out$tot.withinss
+}
+
+sum_squares
+
+km.out$tot.withinss
+# Total within-cluster sum of squares
+
+plot(1:8, sum_squares)
+
+km.out=kmeans(x,3,nstart=20)
+km.out$tot.withinss
+
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+LDA requires the assumption that the independent variables are normally distributed.
+
+```{r}
+library(MASS)
+library(pROC)
+library(ISLR)
+library(caret)
+
+histogram()
+
+
+set.seed(1)
+train_index <- sample(1:683, 410)
+
+train <- BreastCancer[train_index,]
+test <- BreastCancer[-train_index,]
+
+lda.fit <- lda(Class ~ ., data = train)
+plot(lda.fit)
+lda.pred <- predict(lda.fit, newdata = test)
+
+roc.lda <- roc(test$Class, lda.pred$posterior[,2], 
+               levels = c("benign", "malignant"))
+plot(roc.lda, legacy.axes = TRUE)
+
+ctrl <- trainControl(method = "cv",
+                     summaryFunction = twoClassSummary,
+                     classProbs = TRUE)
+
+ldaFit1 <- train(x = BreastCancer[,1:9],
+                 y = BreastCancer$Class,
+                 method = "lda",
+                 preProc = c("center","scale"),
+                 metric = "ROC",
+                 trControl = ctrl)
+
+
+confusionMatrix(lda.pred$class, test$Class)
+diag(prop.table(table(lda.pred$class, test$Class), 1))
+
+(table(lda.pred$class, test$Class)[1,1] + table(lda.pred$class, test$Class)[2,2]) / dim(test)[1]
+
+
+qda.fit <- qda(Class ~ ., data = train)
+
+qda.pred <- predict(qda.fit, newdata = test)
+confusionMatrix(qda.pred$class, test$Class)
+diag(prop.table(table(qda.pred$class, test$Class), 1))
+
+(table(qda.pred$class, test$Class)[1,1] + table(qda.pred$class, test$Class)[2,2]) / dim(test)[1]
+
+qdaFit1 <- train(x = BreastCancer[,1:9],
+                 y = BreastCancer$Class,
+                 method = "qda",
+                 preProc = c("center","scale"),
+                 metric = "ROC",
+                 trControl = ctrl)
+qdaFit1
+```
+
+
+LR is seen to be a more flexible and robust method if the assumptions made by LDA are violated [1]. One of the assumptions made is the independent variables are normally distributed with equal covariance matrices.
+
+## KNN
+
+```{r}
+library(class)
+
+knn_pred <- knn(train[,-10], test[,-10], train$Class, k = 3, prob = TRUE)
+scores.knn <- attr(knn_pred,"prob")
+knnROC <- roc(test$Class, scores.knn, 
+               levels = c("benign", "malignant"))
+plot(knnROC, legacy.axes = TRUE)
+auc(knnROC)
+
+area_under_curve <- rep(0, 10)
+accuracy <- rep(0, 10)
+for(i in 1:10) {
+  knn_pred <- knn(train[,-10], test[,-10], train$Class, k = i, prob = TRUE)
+  scores.knn <- attr(knn_pred,"prob")
+  knnROC <- roc(test$Class, scores.knn, 
+               levels = c("benign", "malignant"))
+  
+  area_under_curve[i] <- auc(knnROC)
+  accuracy[i] <- confusionMatrix(knn_pred, test$Class)$overall[1]
+}
+
+area_under_curve
+accuracy
+confusionMatrix(knn_pred, test$Class)$overall[1]
+
+knn_output <- data_frame(1:10, area_under_curve, accuracy)
+
+plot(1:10, area_under_curve)
+
+plot(1:10, accuracy)
+
+
+knn_pred <- knn(train[,-10], test[,-10], train$Class, k = 4, prob = TRUE)
+scores.knn <- attr(knn_pred,"prob")
+knnROC <- roc(test$Class, scores.knn, 
+              levels = c("benign", "malignant"))
+  
+auc(knnROC)
+confusionMatrix(knn_pred, test$Class)
+
+ggplot(aes(x = ))
+```
+
+After comparing the area under the ROC curve and the percentage of acccuracy in predicting tumor type, the best number of neighbors was chosen to be ---. This value appears to maximize accuracy without losing too much in area under the curve. The chosen number of neighbors has area under the curve equal to ----- and prediction accuracy against the test set of ---. 
+The sensitivity and specificity are --- and --, respectively. 
+
+
+## Support Vector Machine 
+
+```{r}
+library(e1071)
+
+set.seed(1)
+tune.out <- e1071::tune(svm, Class ~ ., data = train, 
+                 type = "C-classification", kernel = "linear", 
+                 ranges = list(cost = c(0.001 , 0.01, 0.1, 1,5,10,100)))
+
+
+svmfit <- e1071::svm(Class ~ ., data = train, kernel = "linear", cost = 0.01)
+
+summary(svmfit)
+
+pred.svm.train <- predict(svmfit, test )
+confusionMatrix(test$Class, pred.svm.train)
+
+
+set.seed(1)
+tune.out <- tune(svm, Class ~ ., data = train, 
+                 kernel = "radial",
+                 ranges = list(cost = c(0.1,1,10,100,1000),
+                          gamma = c(0.0001,0.001,0.01,0.1,0.5,1)))
+svmfit <- e1071::svm(Class ~ ., data = train, kernel = "radial", cost = 10, gamma = .1)
+
+svm.tune.pred.train <- predict(svmfit, 
+                         newdata = test)
+
+
+confusionMatrix(test$Class, svm.tune.pred.train)
+
+```
+
+In comparing prediction accuracy of support vector classification using a linear kernel versus a radial kernel after tuning parameters, the linear kernel performed better on this data. The linear kernel with tuning resulted in better performance using cost = .01, and with this model the prediction accuracy on the test data was ---. 
+
+
+## Overall Comparison of Methods
+
+```{r}
+library(knitr)
+
+accuracy <- c()
+specifiity <- c()
+sensitivity <- c()
+
+
+summary <- data_frame()
+
+row.names(summary) <- c("Logistic Regression", "Random Forest", "KNN", "Support Vector Class - Linear", "Support Vector Class - Radial")
+
+kable(summary)
+```
