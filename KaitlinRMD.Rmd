@@ -6,7 +6,7 @@ output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE, warning = FALSE, message = FALSE)
 ```
 
 ```{r, summary_all}
@@ -18,16 +18,17 @@ attach(BreastCancer)
 library(dplyr)
 BreastCancer <- BreastCancer[,-1] # remove ID column
 summary(BreastCancer) # note that everything is factor
-
-plot(BreastCancer)
 ```
 
-```{r, ggpairs_factor_plot}
-library(GGally)
-ggpairs(BreastCancer) # note all are factors
-```
+Above, we load in the data and remove the ID column as it is not needed.
 
-```{r, ggpairs_num_plot}
+The data used in this project is the `BreastCancer` data from `mlbench` library. It is from the Wisconsin Breast Cancer Database. Each variable except Class is loaded as 11 numerical factors with values ranging from 0 through 10. Class is benign or malignant, and this is the variable of interest. There are 16 missing values in bare nuclei, as seen in the summary above.
+
+The variables included in the dataset are Clump Thickness, Uniformity of Cell Size, Uniformity of Cell Shape, Marginal Adhesion, Single Epithelial Cell Size, Bare Nuclei, Bland Chromatin, Normal Nucleoli, Mitoses, and Class. There are 458 subjects with benign growths and 241 with malignant.
+
+Below, we convert the factors into numeric values and remove the NA's. Since there are few missing values compared to the number in the dataset, removing them should not effect our overall analysis power.
+
+```{r, data cleaning}
 BreastCancer = BreastCancer %>% 
   mutate(Cl.thickness=as.numeric(Cl.thickness)) %>% 
   mutate(Cell.size=as.numeric(Cell.size)) %>%  
@@ -38,25 +39,33 @@ BreastCancer = BreastCancer %>%
   mutate(Bl.cromatin=as.numeric(Bl.cromatin)) %>%  
   mutate(Normal.nucleoli=as.numeric(Normal.nucleoli)) %>%  
   mutate(Mitoses=as.numeric(Mitoses)) %>% na.omit()
+```
 
+### Summary plots
+
+```{r ggpairs_num_plot}
+library(GGally)
 ggpairs(BreastCancer) # all but response are numeric
 ```
 
-```{r, cor_plot_noresp}
-library(psych)
-cor.plot(BreastCancer[,-10]) # correlation not including response
-```
+
+The correlation plot below does not give much information. As expected, most measures have correlation with the outcome. Mitoses, however, has almost no corellation.
 
 ```{r, cor_plot_wresp}
+library(psych)
 BreastCancer_num <- BreastCancer %>% 
   mutate(Class = as.numeric(Class)-1) # numeric response
 cor.plot(BreastCancer_num[,])
 ```
 
+Below are the density plots for the variables. The blue line signifies benign and pink are malignant. We see that there are few malignant subjects with the following: normal nuclei, mitoses, marginal adhesion, single epithelial cell size, uniformity of cell size, uniformity of cell shape. 
+
+There are differences in the density plots of the following varaiables: bland chromatin, bare nucleoli, clump thickness.
+
+The box plots below also show differences in the distributions for bland chromatin, bare nuclei, clump thickness.
+
+
 ```{r, try_feature_plots}
-featurePlot(x=BreastCancer[,-10], y=BreastCancer[,10], 
-            plot="pairs", 
-            auto.key=list(columns=3))
 
 featurePlot(x=BreastCancer[,-10], y=BreastCancer[,10], 
             plot="density", 
@@ -73,6 +82,9 @@ featurePlot(x=BreastCancer[,-10], y=BreastCancer[,10],
             layout=c(3,3))
 ```
 
+## Logistic Analysis
+
+Here is a generalized linear model with all variables included.
 
 ```{r, glm_all}
 glm1 = glm(Class ~., data=BreastCancer,family=binomial)
@@ -83,9 +95,14 @@ summary(glm1)
 At $\alpha$ = 0.05 the following appear significant :
 
 > Cl.thickness
+
 > Marg.adhesion
+
 > Bare.nuclei
+
 > Bl.cromatin
+
+We rerun the generalized linear model with only the significant values:
 
 ```{r, glm_sig}
 glm2 = glm(Class ~ Cl.thickness + Marg.adhesion + 
@@ -95,9 +112,11 @@ glm2 = glm(Class ~ Cl.thickness + Marg.adhesion +
 summary(glm2)
 ```
 
-```{r}
-library(caret)
+(conclusion/ explanation here)
 
+Below are the feature plots for only the significant predictors, so that we may better see the difference in distributions between the variable and the outcome.
+
+```{r}
 featurePlot(x=BreastCancer[,c(1,4,6,7)], y=BreastCancer[,10], 
             plot="density", 
             scales=list(x=list(relation="free"), 
@@ -111,14 +130,14 @@ featurePlot(x=BreastCancer[,c(1,4,6,7)], y=BreastCancer[,10],
             auto.key=list(columns=3))
 ```
 
-
+Now we split our data into a training and test set so we can make predictions
 
 ```{r}
 set.seed(1)
 BreastCancer.train <- sample(1:nrow(BreastCancer), 410) 
 
 BreastCancer.test=BreastCancer[-BreastCancer.train,] # test
-dim(BreastCancer.test)
+
 Class.test=BreastCancer$Class[-BreastCancer.train]
 
 glm.fits=glm(Class ~ Cl.thickness + Marg.adhesion + 
@@ -130,9 +149,7 @@ glm.pred=rep("benign",273)
 glm.pred[glm.probs >.5]="malignant"
 table(glm.pred, Class.test)
 
-
 mean(glm.pred == Class.test)
-mean(glm.pred != Class.test)
 
 library(pROC)
 
@@ -143,4 +160,12 @@ plot(roc.glm.train, legacy.axes = TRUE)
 auc(roc.glm.train)
 ```
 
-Logistic has 95% correct response for test
+There were only 13 incorrect predictions; 5 benign were predicted to be malignant and 8 that were truly malignant were predicted to be benign. Logistic has 95% correct response for test, which is pretty good.
+
+The area under the ROC curve is 99%.
+
+Sensitivity is...
+
+Specificity is ...
+
+
