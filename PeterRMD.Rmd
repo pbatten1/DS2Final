@@ -52,6 +52,12 @@ oob.err
 test.err
 ```
 
+```{r training accuracy, message=FALSE, warning=FALSE, include=FALSE}
+set.seed(3458)
+preda=predict(rf, BreastCancer.train[1:10])
+confusionMatrix(preda, BreastCancer.train$Class, positive = 'malignant')
+```
+
 ```{r Output, echo=TRUE}
 confusionMatrix(pred, BreastCancer.test$Class, positive = 'malignant')
 importance(rf, type = 2)
