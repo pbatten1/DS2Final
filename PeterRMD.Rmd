@@ -53,9 +53,14 @@ test.err
 importance(rf)
 
 matplot(1:mtry , cbind(oob.err,test.err), pch=19 , col=c("red","blue"),type="b",ylab="Mean Squared Error",xlab="Number of Predictors Considered at each Split")
-legend("topright",legend=c("Out of Bag Error","Test Error"), pch=19, col=c("red","blue"))
+legend("bottomright",legend=c("Out of Bag Error","Test Error"), pch=19, col=c("red","blue"))
 ```
 
-Applying random forests techniques to predict tumor classification results in 3 variables being deemed important in contributing to this classification. Restricting the number of variables used at each split per tree to three yields the best out-of-bag error, as well as the (tied-for) best test error. 3 variables is also relatively simple, which is important to consider when building classifier models. The 3 variables that most effectively decrease impurity at each decision node are cell size, bland chromatin (which measures texture of thhe nucleus), and bare nuclei (?). 
+Applying random forests techniques to predict tumor classification results in 3 variables being deemed important in contributing to this classification. Restricting the number of variables used at each split per tree to three yields the best out-of-bag error, as well as the (tied-for) best test error. 3 variables is also relatively simple, which is important to consider when building classifier models. The 3 variables that most effectively decrease impurity at each decision node are cell size, bland chromatin (which measures texture of thhe nucleus), and bare nuclei, a term used to describe the composition of the nucleus. 
 
 
+>Write-up
+
+###Intro
+For our analysis we used Breast Cancer data from the Wisconsin Breast Cancer Database, compiled by Dr. William Wolberg MD, in the early 1990s, found in the "mlbench" R package. The objective of this dataset is to to use characteristics of tumors such as cell size and texture to classify the tumors as either benign or malignant. The goals of this analysis are to identify the best learning method for classifying  tumors. 
+Methods used include logistic regression, K-means clustering, Support Vector Machine, LDA, Random Forests, and KNN. While it will be helpful to identify one specific method for predicting future classifications of tumor, it is still advisable to consider the output from all methods, albeit with weighted considerations based on how effective the models are. Ultimately, while machine learning is a very powerful tool for making highly important medical classifications,  user discretion should be taken into account when considering interpretability, such as potentially using a simpler model that nearly the same power as a more complex model. 
