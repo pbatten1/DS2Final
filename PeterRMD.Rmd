@@ -9,23 +9,23 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r libraries, message=FALSE, warning=FALSE, include=FALSE}
 library(mlbench)
 data(BreastCancer)
 library(tidyverse)
 library(randomForest)
-library(reprtree)
+library(caret)
 ```
 
 
-```{r training/test sets}
+```{r training/test sets, message=FALSE, warning=FALSE, include=FALSE}
 set.seed(1)
 train_sample <- sample(1:nrow(BreastCancer), 410) 
 BreastCancer.train=BreastCancer[train_sample,]
 BreastCancer.test=BreastCancer[-train_sample,]
 ```
 
-```{r random forests}
+```{r random forests, message=FALSE, warning=FALSE, include=FALSE}
 set.seed(10)
 BC.rf=randomForest(Class ~ . , data = BreastCancer, subset = train_sample, na.action = na.exclude, importance=T)
 BC.rf #RF chooses 3 variables
@@ -50,13 +50,16 @@ for(mtry in 1:10)
 }
 oob.err
 test.err
-importance(rf)
-rf
+```
+
+```{r Output, echo=TRUE}
+confusionMatrix(pred, BreastCancer.test$Class, positive = 'malignant')
+importance(rf, type = 2)
 matplot(1:mtry , cbind(oob.err,test.err), pch=19 , col=c("red","blue"),type="b",ylab="Mean Squared Error",xlab="Number of Predictors Considered at each Split")
 legend("bottomright",legend=c("Out of Bag Error","Test Error"), pch=19, col=c("red","blue"))
 ```
 
-Applying random forests techniques to predict tumor classification results in 3 variables being deemed important in contributing to this classification. Restricting the number of variables used at each split per tree to three yields the best out-of-bag error, as well as the (tied-for) best test error. 3 variables is also relatively simple, which is important to consider when building classifier models. The 3 variables that most effectively decrease impurity at each decision node are cell size, bland chromatin (which measures texture of thhe nucleus), and bare nuclei, a term used to describe the composition of the nucleus. 
+Applying random forests techniques to predict tumor classification results in 3 variables being deemed important in contributing to this classification, as suggested by the Oob error being minimized at 3 predictors and the relatively low test error at 3 predictors. Restricting the number of variables used at each split per tree to three yields the best out-of-bag error, as well as the (tied-for) best test error. 3 variables is also relatively simple, which is important to consider when building classifier models. The 3 variables that most effectively decrease impurity at each decision node are cell size, bland chromatin (which measures texture of thhe nucleus), and bare nuclei, a term used to describe the composition of the nucleus. The accuracy of the random forests in predicitng tumor type are as follows: Accuracy = 95.45%, Kappa statistic = 0.9012, Sensitivity = 0.9231, Specificity = 0.9725 (where sensitivity predicts Malignant tumors). Comparisons to other learning methods can be seen in the table in the Conclusion section. 
 
 
 >Write-up
