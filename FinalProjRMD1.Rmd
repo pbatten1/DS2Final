@@ -7,7 +7,7 @@ output:
   html_document: default
 ---
 
-```{r setup, include=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, cache = TRUE, warning = FALSE, message = FALSE)
 ```
 
@@ -17,9 +17,9 @@ For our analysis we used Breast Cancer data from the Wisconsin Breast Cancer Dat
 
 Methods used include logistic regression, K-means clustering, Support Vector Machine, LDA, Random Forests, and KNN. While it will be helpful to identify one specific method for predicting future classifications of tumor, it is still advisable to consider the output from all methods, albeit with weighted considerations based on how effective the models are. Ultimately, while machine learning is a very powerful tool for making highly important medical classifications,  user discretion should be taken into account when considering interpretability, such as potentially using a simpler model that has nearly the same power as a more complex model. Since our research area is highly regulated and in the clinical setting, we chose to use an untouched testing set to evaluate the performance of our methods. We also examine the kappa statistic as a measure of prediction accuracy since our outcome is unbalanced. 
 
-# Exploratory data analysis
+# Data Cleaning
 
-```{r, summary_all, message=FALSE, warning=FALSE, include=FALSE}
+```{r, summary_all, include = FALSE}
 ### Summary stuff for DS2 final project
 
 library(mlbench)
@@ -30,15 +30,15 @@ BreastCancer <- BreastCancer[,-1] # remove ID column
 summary(BreastCancer) # note that everything is factor
 ```
 
-Above, we load in the data and remove the ID column as it is not needed.
+We load in the data and remove the ID column as it is not needed.
 
 Each variable except Class is loaded as 11 numerical factors with values ranging from 0 through 10. Class is benign or malignant, and this is the variable of interest. There are 16 missing values in bare nuclei, as seen in the summary above.
 
 The variables included in the dataset are Clump Thickness, Uniformity of Cell Size, Uniformity of Cell Shape, Marginal Adhesion, Single Epithelial Cell Size, Bare Nuclei, Bland Chromatin, Normal Nucleoli, Mitoses, and Class. There are 458 subjects with benign growths and 241 with malignant.
 
-Below, we convert the factors into numeric values and remove the NA's. Since there are few missing values compared to the number in the dataset, removing them should not effect our overall analysis power.
+We convert the factors into numeric values and remove the NA's. Since there are few missing values compared to the number in the dataset, removing them should not effect our overall analysis power.
 
-```{r, data cleaning, message=FALSE, warning=FALSE, include=FALSE}
+```{r, data cleaning, include = FALSE}
 BreastCancer = BreastCancer %>% 
   mutate(Cl.thickness=as.numeric(Cl.thickness)) %>% 
   mutate(Cell.size=as.numeric(Cell.size)) %>%  
@@ -51,16 +51,13 @@ BreastCancer = BreastCancer %>%
   mutate(Mitoses=as.numeric(Mitoses)) %>% na.omit()
 ```
 
-### Summary plots
+# Exploratory data analysis
 
-```{r ggpairs_num_plot, message=FALSE, warning=FALSE, include=FALSE}
-library(GGally)
-ggpairs(BreastCancer) # all but response are numeric
-```
+### Summary plots
 
 The correlation plot below does not give much information. As expected, most measures have correlation with the outcome. Mitoses, however, has almost no corellation.
 
-```{r, cor_plot_wresp, message=FALSE, warning=FALSE, include=FALSE}
+```{r, cor_plot_wresp, echo = FALSE}
 library(psych)
 BreastCancer_num <- BreastCancer %>% 
   mutate(Class = as.numeric(Class)-1) # numeric response
@@ -74,7 +71,7 @@ There are differences in the density plots of the following varaiables: bland ch
 The box plots below also show differences in the distributions for bland chromatin, bare nuclei, clump thickness.
 
 
-```{r, try_feature_plots, message=FALSE, warning=FALSE, include=FALSE}
+```{r, try_feature_plots, echo = FALSE}
 library(caret)
 featurePlot(x=BreastCancer[,-10], y=BreastCancer[,10], 
             plot="density", 
@@ -95,59 +92,25 @@ featurePlot(x=BreastCancer[,-10], y=BreastCancer[,10],
 
 ## Logistic Analysis
 
-Here is a generalized linear model with all variables included.
+When we use a generalized linear model with all variables included, at $\alpha$ = 0.05 the following appear significant: `Cl.thickness`, `Marg.adhesion`, `Bare.nuclei`,
+`Bl.cromatin`
 
-```{r, glm_all, message=FALSE, warning=FALSE, include=FALSE}
+```{r, glm_all, eval = FALSE}
 glm1 = glm(Class ~., data=BreastCancer,family=binomial)
 
 summary(glm1)
 ```
 
-At $\alpha$ = 0.05 the following appear significant :
-
-+ Cl.thickness
-
-+ Marg.adhesion
-
-+ Bare.nuclei
-
-+ Bl.cromatin
-
-We rerun the generalized linear model with only the significant values:
-
-```{r, glm_sig, message=FALSE, warning=FALSE, include=FALSE}
-glm2 = glm(Class ~ Cl.thickness + Marg.adhesion + 
-             Bare.nuclei + Bl.cromatin, 
-           data=BreastCancer,family=binomial)
-
-summary(glm2)
-```
-
-(conclusion/ explanation here)
-
-Below are the feature plots for only the significant predictors, so that we may better see the difference in distributions between the variable and the outcome.
-
-```{r training/tes sets, message=FALSE, warning=FALSE, include=FALSE}
-featurePlot(x=BreastCancer[,c(1,4,6,7)], y=BreastCancer[,10], 
-            plot="density", 
-            scales=list(x=list(relation="free"), 
-                        y=list(relation="free")), 
-            auto.key=list(columns=3))
-
-featurePlot(x=BreastCancer[,c(1,4,6,7)], y=BreastCancer[,10], 
-            plot="box", 
-            scales=list(x=list(relation="free"), 
-                        y=list(relation="free")), 
-            auto.key=list(columns=3))
-```
 
 Now we split our data into a training and test set so we can make predictions
 
-```{r training/testing sets, message=FALSE, warning=FALSE, include=FALSE}
+```{r logistic_training_testing_sets, include = FALSE}
 set.seed(1)
 BreastCancer.train <- sample(1:nrow(BreastCancer), 410) 
 
 BreastCancer.test=BreastCancer[-BreastCancer.train,] # test
+
+Class.train=BreastCancer$Class[BreastCancer.train]
 
 Class.test=BreastCancer$Class[-BreastCancer.train]
 
@@ -155,22 +118,24 @@ glm.fits=glm(Class ~ Cl.thickness + Marg.adhesion +
              Bare.nuclei + Bl.cromatin, 
            data=BreastCancer,family=binomial, subset=BreastCancer.train)
 
+glm.probs = predict(glm.fits)
+glm.pred=rep("benign",410)
+glm.pred[glm.probs >.5]="malignant"
+
+train <- confusionMatrix(glm.pred, Class.train, positive = "malignant")
+
 glm.probs = predict(glm.fits, BreastCancer.test, type = "response")
 glm.pred=rep("benign",273)
 glm.pred[glm.probs >.5]="malignant"
-table(glm.pred, Class.test)
 
-confusionMatrix(glm.pred, Class.test, positive = "malignant")
+test <- confusionMatrix(glm.pred, Class.test, positive = "malignant")
+```
 
-mean(glm.pred == Class.test)
 
-library(pROC)
+```{r}
+train
 
-roc.glm.train <- roc(BreastCancer.test$Class, glm.probs,
-               levels = c("benign", "malignant"))
-plot(roc.glm.train, legacy.axes = TRUE)
-
-auc(roc.glm.train)
+test
 ```
 
 There were only 13 incorrect predictions; 5 benign were predicted to be malignant and 8 that were truly malignant were predicted to be benign. Logistic has 95% correct response for test, which is pretty good.
@@ -217,8 +182,6 @@ qda.fit <- qda(Class ~ ., data = train)
 qda.pred <- predict(qda.fit, newdata = test)
 confusionMatrix(qda.pred$class, test$Class, positive = "malignant")
 diag(prop.table(table(qda.pred$class, test$Class), 1))
-
-
 ```
 
 Linear Discriminant Analysis (LDA) resulted in 95.6% accuracy and a kappa statistic of .9 when comparing predictions from the model generated with the training data to the test data classes. Additionally sensitivity was 90.22% and specificity was 98.34% for LDA. For Quadratic Discriminant Analysis (QDA), there was also 95.6% prediction accuracy for the test data and the kappa statistic was slightly improved with a statistic of .9032. QDA had sensitivity of 96.74% and specificity of 95.03%. With higher sensitivity, we have a higher probability of the model accurately predicting malignancy (versus a tumor being benign) given that someone has a malignant tumor. This is important for being able to treat patients using chemotherapy or performing surgery if necessary. With high specificity, we have a higher probability of predicting that someone has a benign tumor given that they have a benign tumor. This is important because we do not want to subject patients to unnecessary risk by performing unnecessary surgery, or putting them on chemotherapy if they don't need to be since it can be very damaging to a patients health. Since both of these values are extremely important for patient health and safety, QDA would be a better choice for a model since we sacrifice too much in sensitivity with LDA. QDA ends up maximizing these values almost equally.
