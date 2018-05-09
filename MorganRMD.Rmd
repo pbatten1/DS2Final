@@ -16,6 +16,17 @@ library(dplyr)
 BreastCancer <- BreastCancer[,-1] # remove ID column
 summary(BreastCancer) # note that everything is factor
 
+BreastCancer = BreastCancer %>% 
+  mutate(Cl.thickness = as.numeric(Cl.thickness)) %>% 
+  mutate(Cell.size = as.numeric(Cell.size)) %>%  
+  mutate(Cell.shape = as.numeric(Cell.shape)) %>%  
+  mutate(Marg.adhesion = as.numeric(Marg.adhesion)) %>%  
+  mutate(Epith.c.size = as.numeric(Epith.c.size)) %>%  
+  mutate(Bare.nuclei = as.numeric(Bare.nuclei)) %>%  
+  mutate(Bl.cromatin = as.numeric(Bl.cromatin)) %>%  
+  mutate(Normal.nucleoli = as.numeric(Normal.nucleoli)) %>%  
+  mutate(Mitoses = as.numeric(Mitoses))
+
 
 library(reshape2)
 library(ggplot2)
@@ -28,16 +39,7 @@ ggplot(independent_vars,aes(x = value)) +
 
 
 ```{r}
-BreastCancer = BreastCancer %>% 
-  mutate(Cl.thickness=as.numeric(Cl.thickness)) %>% 
-  mutate(Cell.size=as.numeric(Cell.size)) %>%  
-  mutate(Cell.shape=as.numeric(Cell.shape)) %>%  
-  mutate(Marg.adhesion=as.numeric(Marg.adhesion)) %>%  
-  mutate(Epith.c.size=as.numeric(Epith.c.size)) %>%  
-  mutate(Bare.nuclei=as.numeric(Bare.nuclei)) %>%  
-  mutate(Bl.cromatin=as.numeric(Bl.cromatin)) %>%  
-  mutate(Normal.nucleoli=as.numeric(Normal.nucleoli)) %>%  
-  mutate(Mitoses=as.numeric(Mitoses))
+
 
 ```
 
@@ -55,8 +57,7 @@ km.out <- kmeans(predictors, 2, nstart = 20)
 
 km.out$cluster
 plot(predictors, col=(km.out$cluster+1), 
-     main="K-Means Clustering Results with K=2", 
-     xlab="", ylab="", pch=20, cex=2)
+     main="K-Means Clustering Results with K=2")
 
 sum_squares <- rep(0, 8)
 for(i in 1:8){
@@ -85,7 +86,6 @@ library(pROC)
 library(ISLR)
 library(caret)
 
-histogram()
 
 
 set.seed(1)
@@ -239,7 +239,7 @@ sensitivity <- c()
 
 summary <- data_frame()
 
-row.names(summary) <- c("Logistic Regression", "Random Forest", "KNN", "Support Vector Class - Linear", "Support Vector Class - Radial")
+row.names(summary) <- c("Logistic Regression", "Random Forest", "KNN","LDA", "Support Vector Classification")
 
 kable(summary)
 ```
