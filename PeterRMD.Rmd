@@ -9,3 +9,53 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+library(mlbench)
+data(BreastCancer)
+library(tidyverse)
+library(randomForest)
+library(reprtree)
+```
+
+
+```{r training/test sets}
+set.seed(1)
+train_sample <- sample(1:nrow(BreastCancer), 410) 
+BreastCancer.train=BreastCancer[train_sample,]
+BreastCancer.test=BreastCancer[-train_sample,]
+```
+
+```{r random forests}
+set.seed(10)
+BC.rf=randomForest(Class ~ . , data = BreastCancer, subset = train_sample, na.action = na.exclude, importance=T)
+BC.rf #RF chooses 3 variables
+plot(BC.rf)
+summary(BC.rf)
+importance(BC.rf, type=1)
+
+test.err=double(10)
+oob.err=double(10)
+for(mtry in 1:10) 
+{
+  rf=randomForest(Class ~ . , data = BreastCancer.train,
+                  mtry=mtry, ntree=200, na.action = na.exclude) 
+  oob.err[mtry] = rf$err.rate[200]
+  
+  pred=predict(rf, BreastCancer.test[1:10]) #Predictions on Test Set for each Tree
+  test.err[mtry]= mean(((as.numeric(BreastCancer.test$Class)-1) - (as.numeric(pred)-1)^2),
+                       na.rm = T) #Mean Squared Test Error
+  
+  cat(mtry," ") #printing the output to the console
+  
+}
+oob.err
+test.err
+importance(rf)
+
+matplot(1:mtry , cbind(oob.err,test.err), pch=19 , col=c("red","blue"),type="b",ylab="Mean Squared Error",xlab="Number of Predictors Considered at each Split")
+legend("topright",legend=c("Out of Bag Error","Test Error"), pch=19, col=c("red","blue"))
+```
+
+Applying random forests techniques to predict tumor classification results in 3 variables being deemed important in contributing to this classification. Restricting the number of variables used at each split per tree to three yields the best out-of-bag error, as well as the (tied-for) best test error. 3 variables is also relatively simple, which is important to consider when building classifier models. The 3 variables that most effectively decrease impurity at each decision node are cell size, bland chromatin (which measures texture of thhe nucleus), and bare nuclei (?). 
+
+
