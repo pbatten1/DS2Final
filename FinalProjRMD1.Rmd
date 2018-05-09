@@ -7,7 +7,7 @@ output:
   html_document: default
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, cache = TRUE, warning = FALSE, message = FALSE)
 ```
 
@@ -19,7 +19,7 @@ Methods used include logistic regression, K-means clustering, Support Vector Mac
 
 # Exploratory data analysis
 
-```{r, summary_all}
+```{r, summary_all, message=FALSE, warning=FALSE, include=FALSE}
 ### Summary stuff for DS2 final project
 
 library(mlbench)
@@ -38,7 +38,7 @@ The variables included in the dataset are Clump Thickness, Uniformity of Cell Si
 
 Below, we convert the factors into numeric values and remove the NA's. Since there are few missing values compared to the number in the dataset, removing them should not effect our overall analysis power.
 
-```{r, data cleaning}
+```{r, data cleaning, message=FALSE, warning=FALSE, include=FALSE}
 BreastCancer = BreastCancer %>% 
   mutate(Cl.thickness=as.numeric(Cl.thickness)) %>% 
   mutate(Cell.size=as.numeric(Cell.size)) %>%  
@@ -53,14 +53,14 @@ BreastCancer = BreastCancer %>%
 
 ### Summary plots
 
-```{r ggpairs_num_plot}
+```{r ggpairs_num_plot, message=FALSE, warning=FALSE, include=FALSE}
 library(GGally)
 ggpairs(BreastCancer) # all but response are numeric
 ```
 
 The correlation plot below does not give much information. As expected, most measures have correlation with the outcome. Mitoses, however, has almost no corellation.
 
-```{r, cor_plot_wresp}
+```{r, cor_plot_wresp, message=FALSE, warning=FALSE, include=FALSE}
 library(psych)
 BreastCancer_num <- BreastCancer %>% 
   mutate(Class = as.numeric(Class)-1) # numeric response
@@ -74,7 +74,7 @@ There are differences in the density plots of the following varaiables: bland ch
 The box plots below also show differences in the distributions for bland chromatin, bare nuclei, clump thickness.
 
 
-```{r, try_feature_plots}
+```{r, try_feature_plots, message=FALSE, warning=FALSE, include=FALSE}
 library(caret)
 featurePlot(x=BreastCancer[,-10], y=BreastCancer[,10], 
             plot="density", 
@@ -97,7 +97,7 @@ featurePlot(x=BreastCancer[,-10], y=BreastCancer[,10],
 
 Here is a generalized linear model with all variables included.
 
-```{r, glm_all}
+```{r, glm_all, message=FALSE, warning=FALSE, include=FALSE}
 glm1 = glm(Class ~., data=BreastCancer,family=binomial)
 
 summary(glm1)
@@ -115,7 +115,7 @@ At $\alpha$ = 0.05 the following appear significant :
 
 We rerun the generalized linear model with only the significant values:
 
-```{r, glm_sig}
+```{r, glm_sig, message=FALSE, warning=FALSE, include=FALSE}
 glm2 = glm(Class ~ Cl.thickness + Marg.adhesion + 
              Bare.nuclei + Bl.cromatin, 
            data=BreastCancer,family=binomial)
@@ -127,7 +127,7 @@ summary(glm2)
 
 Below are the feature plots for only the significant predictors, so that we may better see the difference in distributions between the variable and the outcome.
 
-```{r}
+```{r training/tes sets, message=FALSE, warning=FALSE, include=FALSE}
 featurePlot(x=BreastCancer[,c(1,4,6,7)], y=BreastCancer[,10], 
             plot="density", 
             scales=list(x=list(relation="free"), 
@@ -143,7 +143,7 @@ featurePlot(x=BreastCancer[,c(1,4,6,7)], y=BreastCancer[,10],
 
 Now we split our data into a training and test set so we can make predictions
 
-```{r}
+```{r training/testing sets, message=FALSE, warning=FALSE, include=FALSE}
 set.seed(1)
 BreastCancer.train <- sample(1:nrow(BreastCancer), 410) 
 
@@ -183,9 +183,9 @@ Specificity is 97%
 
 PPV is 94% and NPV is 96%
 
-## LDA
+## LDA and QDA
 
-```{r}
+```{r lda, message=FALSE, warning=FALSE, include=FALSE}
 library(MASS)
 library(pROC)
 library(ISLR)
@@ -226,7 +226,8 @@ Linear Discriminant Analysis (LDA) resulted in 95.6% accuracy and a kappa statis
 
 ## KNN
 
-```{r}
+#### Choosing Number of Neighbors
+```{r knn, message=FALSE, warning=FALSE, include=FALSE}
 library(class)
 set.seed(1)
 
@@ -243,15 +244,22 @@ for(i in 1:10) {
   accuracy[i] <- confusionMatrix(knn_pred, test$Class)$overall[1]
 }
 
-area_under_curve
-accuracy
-confusionMatrix(knn_pred, test$Class)$overall[1]
+
 
 knn_output <- data_frame(1:10, area_under_curve, accuracy)
+colnames(knn_output) <- c("Number of Neighbors", "Area Under Curve", "Accuracy")
 
-plot(1:10, area_under_curve)
+kable(knn_output, align = "c")
+```
 
-plot(1:10, accuracy)
+```{r}
+plot(1:10, area_under_curve, xlab = "Number of Neighbors", ylab = "Area Under Curve")
+
+plot(1:10, accuracy, xlab = "Number of Neighbors", ylab = " Test Accuracy")
+
+```
+
+```{r knn2, message=FALSE, warning=FALSE, include=FALSE}
 set.seed(1)
 knn_pred <- knn(train[,-10], test[,-10], train$Class, k = 3, prob = TRUE)
 scores.knn <- attr(knn_pred,"prob")
@@ -259,6 +267,11 @@ knnROC <- roc(test$Class, scores.knn,
               levels = c("benign", "malignant"))
   
 auc(knnROC)
+```
+
+### 
+
+```{r}
 confusionMatrix(knn_pred, test$Class, positive = "malignant")
 ```
 
@@ -266,8 +279,9 @@ After comparing the area under the ROC curve and the percentage of acccuracy in 
 
 
 ## Support Vector Machine 
+#### Linear Kernel
 
-```{r}
+```{r svm, message=FALSE, warning=FALSE, include=FALSE}
 library(e1071)
 
 set.seed(1)
@@ -277,10 +291,17 @@ tune.out <- e1071::tune(svm, Class ~ ., data = train,
 
 svmfit <- e1071::svm(Class ~ ., data = train, kernel = "linear", cost = 0.01)
 
-pred.svm.train <- predict(svmfit, test )
+pred.svm.train <- predict(svmfit, test)
+```
+
+
+```{r}
 confusionMatrix(test$Class, pred.svm.train, positive = "malignant")
+```
 
+#### Radial Kernel
 
+```{r svm2, message=FALSE, warning=FALSE, include=FALSE}
 tune.out <- tune(svm, Class ~ ., data = train, 
                  kernel = "radial",
                  ranges = list(cost = c(0.1,1,10,100,1000),
@@ -290,8 +311,9 @@ svmfit <- e1071::svm(Class ~ ., data = train, kernel = "radial", cost = 10, gamm
 
 svm.tune.pred.train <- predict(svmfit, 
                          newdata = test)
+```
 
-
+```{r}
 confusionMatrix(test$Class, svm.tune.pred.train, positive = "malignant")
 
 ```
