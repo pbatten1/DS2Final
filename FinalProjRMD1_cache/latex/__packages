@@ -13,3 +13,11 @@ ISLR
 class
 e1071
 knitr
+tidyverse
+tibble
+tidyr
+readr
+purrr
+stringr
+forcats
+randomForest
