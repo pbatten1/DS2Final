@@ -2,7 +2,9 @@
 title: "DS2 Final"
 author: "M. de Ferrante, K. Maciejewski, P. Batten"
 date: "April 26, 2018"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -12,7 +14,7 @@ knitr::opts_chunk$set(echo = TRUE, cache = TRUE, warning = FALSE, message = FALS
 ###Intro
 For our analysis we used Breast Cancer data from the Wisconsin Breast Cancer Database, compiled by Dr. William Wolberg MD, in the early 1990s, found in the `mlbench` R package. The objective of this dataset is to to use characteristics of tumors such as cell size and texture to classify the tumors as either benign or malignant. The goals of this analysis are to identify the best learning method for classifying tumors. 
 
-Methods used include logistic regression, K-means clustering, Support Vector Machine, LDA, Random Forests, and KNN. While it will be helpful to identify one specific method for predicting future classifications of tumor, it is still advisable to consider the output from all methods, albeit with weighted considerations based on how effective the models are. Ultimately, while machine learning is a very powerful tool for making highly important medical classifications,  user discretion should be taken into account when considering interpretability, such as potentially using a simpler model that has nearly the same power as a more complex model. 
+Methods used include logistic regression, K-means clustering, Support Vector Machine, LDA, Random Forests, and KNN. While it will be helpful to identify one specific method for predicting future classifications of tumor, it is still advisable to consider the output from all methods, albeit with weighted considerations based on how effective the models are. Ultimately, while machine learning is a very powerful tool for making highly important medical classifications,  user discretion should be taken into account when considering interpretability, such as potentially using a simpler model that has nearly the same power as a more complex model. Since our research area is highly regulated and in the clinical setting, we chose to use an untouched testing set to evaluate the performance of our methods. We also examine the kappa statistic as a measure of prediction accuracy since our outcome is unbalanced. 
 
 
 ```{r, summary_all}
@@ -178,4 +180,137 @@ Specificity is 97%
 
 PPV is 94% and NPV is 96%
 
+```{r}
+library(MASS)
+library(pROC)
+library(ISLR)
+library(caret)
+
+set.seed(1)
+train_index <- sample(1:683, 410)
+
+train <- BreastCancer[train_index,]
+test <- BreastCancer[-train_index,]
+
+lda.fit <- lda(Class ~ ., data = train)
+plot(lda.fit)
+lda.pred <- predict(lda.fit, newdata = test)
+
+roc.lda <- roc(test$Class, lda.pred$posterior[,2], 
+               levels = c("benign", "malignant"))
+#plot(roc.lda, legacy.axes = TRUE)
+
+
+
+confusionMatrix(lda.pred$class, test$Class, positive = "malignant")
+diag(prop.table(table(lda.pred$class, test$Class), 1))
+
+
+set.seed(1)
+qda.fit <- qda(Class ~ ., data = train)
+
+qda.pred <- predict(qda.fit, newdata = test)
+confusionMatrix(qda.pred$class, test$Class, positive = "malignant")
+diag(prop.table(table(qda.pred$class, test$Class), 1))
+
+
+```
+
+Linear Discriminant Analysis (LDA) resulted in 95.6% accuracy and a kappa statistic of .9 when comparing predictions from the model generated with the training data to the test data classes. Additionally sensitivity was 90.22% and specificity was 98.34% for LDA. For Quadratic Discriminant Analysis (QDA), there was also 95.6% prediction accuracy for the test data and the kappa statistic was slightly improved with a statistic of .9032. QDA had sensitivity of 96.74% and specificity of 95.03%. With higher sensitivity, we have a higher probability of the model accurately predicting malignancy (versus a tumor being benign) given that someone has a malignant tumor. This is important for being able to treat patients using chemotherapy or performing surgery if necessary. With high specificity, we have a higher probability of predicting that someone has a benign tumor given that they have a benign tumor. This is important because we do not want to subject patients to unnecessary risk by performing unnecessary surgery, or putting them on chemotherapy if they don't need to be since it can be very damaging to a patients health. Since both of these values are extremely important for patient health and safety, QDA would be a better choice for a model since we sacrifice too much in sensitivity with LDA. QDA ends up maximizing these values almost equally.
+
+
+## KNN
+
+```{r}
+library(class)
+set.seed(1)
+
+area_under_curve <- rep(0, 10)
+accuracy <- rep(0, 10)
+for(i in 1:10) {
+  set.seed(1)
+  knn_pred <- knn(train[,-10], test[,-10], train$Class, k = i, prob = TRUE)
+  scores.knn <- attr(knn_pred,"prob")
+  knnROC <- roc(test$Class, scores.knn, 
+               levels = c("benign", "malignant"))
+  
+  area_under_curve[i] <- auc(knnROC)
+  accuracy[i] <- confusionMatrix(knn_pred, test$Class)$overall[1]
+}
+
+area_under_curve
+accuracy
+confusionMatrix(knn_pred, test$Class)$overall[1]
+
+knn_output <- data_frame(1:10, area_under_curve, accuracy)
+
+plot(1:10, area_under_curve)
+
+plot(1:10, accuracy)
+set.seed(1)
+knn_pred <- knn(train[,-10], test[,-10], train$Class, k = 3, prob = TRUE)
+scores.knn <- attr(knn_pred,"prob")
+knnROC <- roc(test$Class, scores.knn, 
+              levels = c("benign", "malignant"))
+  
+auc(knnROC)
+confusionMatrix(knn_pred, test$Class, positive = "malignant")
+```
+
+After comparing the area under the ROC curve and the percentage of acccuracy in predicting tumor type, the best number of neighbors was chosen to be 3. This value appears to maximize accuracy without losing too much in area under the curve. The chosen number of neighbors has area under the curve equal to .4378 and prediction accuracy against the test set of 96.7%. The kappa statistic is .9256. The sensitivity and specificity are 93.48% and 98.34%, respectively. 
+
+
+## Support Vector Machine 
+
+```{r}
+library(e1071)
+
+set.seed(1)
+tune.out <- e1071::tune(svm, Class ~ ., data = train, 
+                 type = "C-classification", kernel = "linear", 
+                 ranges = list(cost = c(0.001 , 0.01, 0.1, 1,5,10,100)))
+
+svmfit <- e1071::svm(Class ~ ., data = train, kernel = "linear", cost = 0.01)
+
+pred.svm.train <- predict(svmfit, test )
+confusionMatrix(test$Class, pred.svm.train, positive = "malignant")
+
+
+tune.out <- tune(svm, Class ~ ., data = train, 
+                 kernel = "radial",
+                 ranges = list(cost = c(0.1,1,10,100,1000),
+                          gamma = c(0.0001,0.001,0.01,0.1,0.5,1)))
+
+svmfit <- e1071::svm(Class ~ ., data = train, kernel = "radial", cost = 10, gamma = .1)
+
+svm.tune.pred.train <- predict(svmfit, 
+                         newdata = test)
+
+
+confusionMatrix(test$Class, svm.tune.pred.train, positive = "malignant")
+
+```
+
+The linear kernel with tuning resulted in better performance using cost = .01, and with this model the prediction accuracy on the test data was 95.6% with a kappa statistic of .9011. The sensitivity for the linear kernel was 94.44% and the specificity was 96.17%. Support vector classification with a radial kernel had test set accuracy of 94.87% and a kappa statistic of .8858 (after tuning the parameters). The sensitivity for the radial kernel was 91.49% and the specificity was 96.65%. In comparing prediction accuracy of support vector classification using a linear kernel versus a radial kernel after tuning parameters, the linear kernel performed better on this data. 
+
+
+## Overall Comparison of Methods
+
+```{r}
+library(knitr)
+
+accuracy <- c("95.24%" , "95.45%", '96.7%', "95.6%", "95.6%", "95.6%")
+kappa_stat <- c(.8926 , .9012, .9256, .9, .9032, .9011)
+sensitivity <- c("91.30%", '92.31%', "93.48%", "90.22%", "96.74%", "94.4%")
+specificity <- c("97.24%", "97.25%", "98.34%", "98.34%", "95.03%", "96.17%")
+
+
+summary <- data_frame(accuracy, kappa_stat, sensitivity, specificity)
+
+row.names(summary) <- c("Logistic Regression", "Random Forest", "KNN","LDA","QDA", "Support Vector Classification")
+
+colnames(summary) <- c("Test Accuracy", "Kappa Statistic", "Sensitivity", "Specificity")
+
+kable(summary, align = "c")
+```
 
