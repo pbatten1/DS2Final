@@ -51,7 +51,7 @@ for(mtry in 1:10)
 oob.err
 test.err
 importance(rf)
-
+rf
 matplot(1:mtry , cbind(oob.err,test.err), pch=19 , col=c("red","blue"),type="b",ylab="Mean Squared Error",xlab="Number of Predictors Considered at each Split")
 legend("bottomright",legend=c("Out of Bag Error","Test Error"), pch=19, col=c("red","blue"))
 ```
