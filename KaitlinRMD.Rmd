@@ -149,6 +149,9 @@ glm.pred=rep("benign",273)
 glm.pred[glm.probs >.5]="malignant"
 table(glm.pred, Class.test)
 
+library(caret)
+confusionMatrix(glm.pred, Class.test, positive = "malignant")
+
 mean(glm.pred == Class.test)
 
 library(pROC)
@@ -164,8 +167,10 @@ There were only 13 incorrect predictions; 5 benign were predicted to be malignan
 
 The area under the ROC curve is 99%.
 
-Sensitivity is...
+Sensitivity is 91%
 
-Specificity is ...
+Specificity is 97%
+
+PPV is 94% and NPV is 96%
 
 
