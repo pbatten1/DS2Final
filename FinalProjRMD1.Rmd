@@ -1,7 +1,6 @@
 ---
 title: "Classification Methods for Predicting Tumor Malignancy"
 author: "M. de Ferrante, K. Maciejewski, P. Batten"
-date: "April 26, 2018"
 output:
   pdf_document: default
   html_document: default
@@ -19,7 +18,7 @@ Methods used include logistic regression, K-means clustering, Support Vector Mac
 
 # Data Cleaning
 
-```{r, summary_all, include = FALSE}
+```{r, summary_all, echo = FALSE}
 ### Summary stuff for DS2 final project
 
 library(mlbench)
@@ -141,15 +140,11 @@ train
 test
 ```
 
-There were only 13 incorrect predictions; 5 benign were predicted to be malignant and 8 that were truly malignant were predicted to be benign. Logistic has 95% correct response for test, which is pretty good.
+Prediction on the training set was 96.83% accurate. 6 benign tumors were misclassified as malignant and 7 malignant tumors were misclassified as benign. 
 
-The area under the ROC curve is 99%.
+Using the test set, there were only 13 incorrect predictions; 5 benign were predicted to be malignant and 8 that were truly malignant were predicted to be benign. Logistic has 95.24% correct response for test, which is pretty good. Sensitivity is 91.30%, specificity is 97.24%, positive predictive value is 94.38% and negative predictive value is 95.65%, where malignant is the positive class. These are all very high measures and would be good values of interest to doctors and patients.  
 
-Sensitivity is 91%
-
-Specificity is 97%
-
-PPV is 94% and NPV is 96%
+The area under the test ROC curve is 99%.
 
 ## LDA and QDA
 
@@ -338,7 +333,7 @@ matplot(1:mtry , cbind(oob.err,test.err), pch=19 , col=c("red","blue"),type="b",
 legend("bottomright",legend=c("Out of Bag Error","Test Error"), pch=19, col=c("red","blue"))
 ```
 
-Applying random forests techniques to predict tumor classification results in 3 variables being deemed important in contributing to this classification, as suggested by the Oob error being minimized at 3 predictors and the relatively low test error at 3 predictors. Restricting the number of variables used at each split per tree to three yields the best out-of-bag error, as well as the (tied-for) best test error. 3 variables is also relatively simple, which is important to consider when building classifier models. The 3 variables that most effectively decrease impurity at each decision node are cell size, bland chromatin (which measures texture of thhe nucleus), and bare nuclei, a term used to describe the composition of the nucleus. The accuracy of the random forests in predicitng tumor type are as follows: Accuracy = 95.45%, Kappa statistic = 0.9012, Sensitivity = 0.9231, Specificity = 0.9725 (where sensitivity predicts Malignant tumors). Comparisons to other learning methods can be seen in the table in the Conclusion section.
+Applying random forests techniques to predict tumor classification results in 3 variables being deemed important in contributing to this classification, as suggested by the Oob error being minimized at 3 predictors and the relatively low test error at 3 predictors. Restricting the number of variables used at each split per tree to three yields the best out-of-bag error, as well as the (tied-for) best test error. 3 variables is also relatively simple, which is important to consider when building classifier models. The 3 variables that most effectively decrease impurity at each decision node are cell size, bland chromatin (which measures texture of thhe nucleus), and bare nuclei, a term used to describe the composition of the nucleus. The accuracy of the random forests in predicitng tumor type are as follows: Accuracy = 95.45%, Kappa statistic = 0.9012, Sensitivity = 92.31%, Specificity = 97.25% (where sensitivity predicts Malignant tumors). Comparisons to other learning methods can be seen in the table in the Conclusion section.
 
 
 # Conclusions 
